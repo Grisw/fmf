@@ -1,0 +1,114 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{% block after_field_sets %}
+<script type="text/javascript">
+    django.jQuery("#id_password").attr("type", "password");
+</script>
+<div class="module aligned">
+    <div class="form-row">
+        <label class="required" for="id_start">{% trans 'Start processing' %}: </label>
+        <input type="button" value="{% trans 'Start' %}" name="_start" id="id_start">
+        <span class="hidden" style="margin-left: 10px;" id="id_span_ind">{% trans 'Finished in <span id="id_span_time"></span>s.' %}</span>
+    </div>
+    <div class="form-row">
+        <label class="required" for="id_codes">{% trans 'Code' %}: </label>
+        <input maxlength="6" oninput="value=value.replace(/[^\d]/g,'')" required class="vTextField" id="id_codes" type="text" name="_codes">
+        <input disabled type="button" style="margin-left: 10px;" value="{% trans 'Submit' %}" name="_submit" id="id_submit">
+        <span class="hidden" style="margin-left: 10px;" id="id_span_code_ind">{% trans 'Success' %}</span>
+    </div>
+</div>
+<script type="text/javascript">
+    var button = django.jQuery("#id_start");
+    var span_ind = django.jQuery("#id_span_ind");
+
+    var sub_button = django.jQuery("#id_submit");
+    var span_code_ind = django.jQuery("#id_span_code_ind");
+
+    button.click(function () {
+        var time = 240;
+        span_ind.html('{% trans 'Finished in <span id="id_span_time"></span>s.' %}');
+        var span_time = django.jQuery("#id_span_time");
+        button.attr("disabled", true);
+        span_time.html(time--);
+        span_ind.removeClass("hidden");
+        var interval = setInterval(function(){
+            span_time.html(time--);
+            if(time < 0){
+                clearInterval(interval);
+            }
+        }, 1000);
+        django.jQuery.ajax({
+            url: "{% url 'feed_start' %}",
+            type: "POST",
+            xhrFields: {
+                withCredentials: true
+            },
+            dataType: "json",
+            data: {
+                account: django.jQuery("#id_account").val(),
+                password: django.jQuery("#id_password").val(),
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            timeout: 240000,
+            success: function(data){
+                if (data["code"] === 0){
+                    span_ind.html("{% trans 'Login success. Waiting for codes.' %}");
+                    sub_button.removeAttr("disabled");
+                    django.jQuery("#id_account").attr("disabled", true);
+                    django.jQuery("#id_password").attr("disabled", true);
+                } else if (data["code"] === 1){
+                    span_ind.html("{% trans 'Login failed, check password.' %}");
+                    button.removeAttr("disabled");
+                } else {
+                    span_ind.html("{% trans 'Error occurred!' %}");
+                    button.removeAttr("disabled");
+                }
+            },
+            complete: function(xhr, status){
+                clearInterval(interval);
+                if(status === 'timeout' || status === 'error'){
+                    span_ind.html("{% trans 'Error occurred!' %}");
+                    button.removeAttr("disabled");
+                }
+        　　}
+        });
+    });
+
+    sub_button.click(function () {
+        span_code_ind.addClass("hidden");
+        sub_button.attr("disabled", true);
+        django.jQuery.ajax({
+            url: "{% url 'feed_codes' %}",
+            type: "POST",
+            xhrFields: {
+                withCredentials: true
+            },
+            dataType: "json",
+            data: {
+                account: django.jQuery("#id_account").val(),
+                codes: django.jQuery("#id_codes").val(),
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(data){
+                if (data["code"] === 0){
+                    span_code_ind.html("{% trans 'OK.' %}");
+                } else if (data["code"] === 1){
+                    span_code_ind.html("{% trans 'Auth failed, check codes.' %}");
+                    sub_button.removeAttr("disabled");
+                } else {
+                    span_code_ind.html("{% trans 'Error occurred!' %}");
+                    sub_button.removeAttr("disabled");
+                }
+            },
+            complete: function(xhr, status){
+                span_code_ind.removeClass("hidden");
+                if(status === 'timeout' || status === 'error'){
+                    span_code_ind.html("{% trans 'Error occurred!' %}");
+                    sub_button.removeAttr("disabled");
+                }
+        　　}
+        });
+    });
+</script>
+{% endblock %}
