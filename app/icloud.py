@@ -140,7 +140,7 @@ class ICloud(object):
                 for loc in obj['locations']:
                     id = loc['id']
                     address = ' '.join(loc['location']['address']['formattedAddressLines'])
-                    time = datetime.datetime.fromtimestamp(loc['location']['timestamp'] / 1000.0)
+                    time = loc['location']['timestamp'] / 1000.0
                     accuracy = loc['location']['horizontalAccuracy']
                     latitude = loc['location']['latitude']
                     longitude = loc['location']['longitude']
@@ -186,7 +186,7 @@ class ICloud(object):
             account=obj['account'],
             uid=obj['uid'],
             name=obj['name'],
-            time=obj['time'],
+            time=datetime.datetime.fromtimestamp(obj['time']),
             accuracy=obj['accuracy'],
             latitude=obj['latitude'],
             longitude=obj['longitude'],
