@@ -117,12 +117,12 @@ class ICloud(object):
         self.tab.start()
         self.tab.Network.enable()
         # Start auto refresh.
-        Timer(300, self.auto_refresh).start()
+        Timer(1800, self.auto_refresh).start()
         return True
 
     def auto_refresh(self):
         self.browser.get('https://www.icloud.com/#fmf')
-        Timer(300, self.auto_refresh).start()
+        Timer(1800, self.auto_refresh).start()
 
     def response_received(self, **kwargs):
         response = kwargs.get('response')
