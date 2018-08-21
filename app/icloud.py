@@ -162,18 +162,21 @@ class ICloud(object):
     def save_model(self, obj):
         if obj['uid'] not in self.mapping:
             res = requests.get(
-                'http://yingyan.baidu.com/api/v3/entity/list?ak={ak}&service_id={service_id}&filter=entity_names:{uid}'.format(
-                    ak=BMAP_AK, service_id=YINGYAN_ID, uid=obj['uid']))
+                'http://yingyan.baidu.com/api/v3/entity/list', params={
+                    'ak': BMAP_AK,
+                    'service_id': YINGYAN_ID,
+                    'filter': 'entity_names:{uid}'.format(uid=obj['uid'])
+                })
             jo = json.loads(res.text)
             if jo['status'] != 0:
-                res = requests.post('http://yingyan.baidu.com/api/v3/entity/add', json={
+                res = requests.post('http://yingyan.baidu.com/api/v3/entity/add', data={
                     'ak': BMAP_AK,
                     'service_id': YINGYAN_ID,
                     'entity_name': obj['uid']
                 })
                 logger.info('YingYan ADD entity: {res}'.format(res=res.text))
             self.mapping.add(obj['uid'])
-        res = requests.post('http://yingyan.baidu.com/api/v3/track/addpoint', json={
+        res = requests.post('http://yingyan.baidu.com/api/v3/track/addpoint', data={
             'ak': BMAP_AK,
             'service_id': YINGYAN_ID,
             'entity_name': obj['uid'],
