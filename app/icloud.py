@@ -179,7 +179,8 @@ class ICloud(object):
             'latitude': obj['latitude'],
             'longitude': obj['longitude'],
             'loc_time': int(obj['time']),
-            'radius': obj['accuracy']
+            'radius': obj['accuracy'],
+            'coord_type_input': 'wgs84'
         })
         logger.info('YingYan ADD point: {res}'.format(res=res.text))
         Location.objects.create(
