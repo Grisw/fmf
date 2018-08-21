@@ -69,11 +69,7 @@ class ICloud(object):
         self.account = account
         # Get the login page.
         self.browser.get('https://www.icloud.com/#fmf')
-        try:
-            auth_frame = self.__wait_for_visible('//*[@id="auth-frame"]')
-        except Exception as e:
-            logger.error(self.browser.get_screenshot_as_base64())
-            raise e
+        auth_frame = self.__wait_for_visible('//*[@id="auth-frame"]')
         self.browser.switch_to.frame(auth_frame)
         logger.info('Login page is loaded.')
 
@@ -152,7 +148,7 @@ class ICloud(object):
                         'account': self.account,
                         'uid': id,
                         'name': contacts[id],
-                        'time': int(loc['location']['timestamp']),
+                        'time': time,
                         'accuracy': accuracy,
                         'latitude': latitude,
                         'longitude': longitude,
@@ -182,7 +178,7 @@ class ICloud(object):
             'entity_name': obj['uid'],
             'latitude': obj['latitude'],
             'longitude': obj['longitude'],
-            'loc_time': obj['time'],
+            'loc_time': int(obj['time']),
             'radius': obj['accuracy']
         })
         logger.info('YingYan ADD point: {res}'.format(res=res.text))
@@ -190,7 +186,7 @@ class ICloud(object):
             account=obj['account'],
             uid=obj['uid'],
             name=obj['name'],
-            time=datetime.datetime.fromtimestamp(obj['time'] / 1000.0),
+            time=obj['time'],
             accuracy=obj['accuracy'],
             latitude=obj['latitude'],
             longitude=obj['longitude'],
