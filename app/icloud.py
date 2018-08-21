@@ -121,16 +121,13 @@ class ICloud(object):
         return True
 
     def auto_refresh(self):
+        logger.info('REFRESHING...')
         self.browser.get('https://www.icloud.com/#fmf')
         Timer(1800, self.auto_refresh).start()
 
     def response_received(self, **kwargs):
         response = kwargs.get('response')
         request_id = kwargs.get('requestId')
-        if response.get('url').startswith('http'):
-            logger.info('{url}'.format(url=response.get('url')))
-        else:
-            logger.info('{url}'.format(url=response.get('url')[:10]))
         if 'refreshClient' in response.get('url'):
             try:
                 content = self.tab.Network.getResponseBody(requestId=request_id)['body']
