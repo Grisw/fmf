@@ -152,7 +152,7 @@ class ICloud(object):
                         'account': self.account,
                         'uid': id,
                         'name': contacts[id],
-                        'time': loc['location']['timestamp'],
+                        'time': int(loc['location']['timestamp']),
                         'accuracy': accuracy,
                         'latitude': latitude,
                         'longitude': longitude,
