@@ -166,13 +166,14 @@ class ICloud(object):
                     ak=BMAP_AK, service_id=YINGYAN_ID, uid=obj['uid']))
             jo = json.loads(res.text)
             if jo['status'] != 0:
-                requests.post('http://yingyan.baidu.com/api/v3/entity/add', json={
+                res = requests.post('http://yingyan.baidu.com/api/v3/entity/add', json={
                     'ak': BMAP_AK,
                     'service_id': YINGYAN_ID,
                     'entity_name': obj['uid']
                 })
+                logger.info('YingYan ADD entity: {res}'.format(res=res.text))
             self.mapping.add(obj['uid'])
-        requests.post('http://yingyan.baidu.com/api/v3/track/addpoint', json={
+        res = requests.post('http://yingyan.baidu.com/api/v3/track/addpoint', json={
             'ak': BMAP_AK,
             'service_id': YINGYAN_ID,
             'entity_name': obj['uid'],
@@ -181,6 +182,7 @@ class ICloud(object):
             'loc_time': obj['time'],
             'radius': obj['accuracy']
         })
+        logger.info('YingYan ADD point: {res}'.format(res=res.text))
         Location.objects.create(
             account=obj['account'],
             uid=obj['uid'],
