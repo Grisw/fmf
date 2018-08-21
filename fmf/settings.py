@@ -119,6 +119,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 LOGGING = {
     'version': 1,
@@ -135,3 +138,6 @@ LOGGING = {
         },
     },
 }
+
+BMAP_AK = 'FxojDWwBlj1QjtTkvGog9upKMnonfte8'
+YINGYAN_ID = 204131

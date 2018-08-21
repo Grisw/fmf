@@ -12,6 +12,8 @@ import random
 import time
 from threading import Timer
 from app.models import Location
+import requests
+from fmf.settings import YINGYAN_ID, BMAP_AK
 
 logger = logging.getLogger('default')
 ICLOUD_DICT = {}
@@ -27,6 +29,7 @@ class ICloud(object):
     wait = None
     tab = None
     current_id = -1
+    mapping = set()
 
     def __init__(self):
         # Start chromedriver
@@ -118,7 +121,7 @@ class ICloud(object):
         return True
 
     def auto_refresh(self):
-        self.browser.refresh()
+        self.browser.get('https://www.icloud.com/#fmf')
         Timer(300, self.auto_refresh).start()
 
     def response_received(self, **kwargs):
@@ -148,16 +151,49 @@ class ICloud(object):
                     accuracy = loc['location']['horizontalAccuracy']
                     latitude = loc['location']['latitude']
                     longitude = loc['location']['longitude']
-                    Location.objects.create(
-                        account=self.account,
-                        uid=id,
-                        name=contacts[id],
-                        time=time,
-                        accuracy=accuracy,
-                        latitude=latitude,
-                        longitude=longitude,
-                        address=address
-                    )
+                    self.save_model({
+                        'account': self.account,
+                        'uid': id,
+                        'name': contacts[id],
+                        'time': loc['location']['timestamp'],
+                        'accuracy': accuracy,
+                        'latitude': latitude,
+                        'longitude': longitude,
+                        'address': address
+                    })
+
+    def save_model(self, obj):
+        if obj['uid'] not in self.mapping:
+            res = requests.get(
+                'http://yingyan.baidu.com/api/v3/entity/list?ak={ak}&service_id={service_id}&filter=entity_names:{uid}'.format(
+                    ak=BMAP_AK, service_id=YINGYAN_ID, uid=obj['uid']))
+            jo = json.loads(res.text)
+            if jo['status'] != 0:
+                requests.post('http://yingyan.baidu.com/api/v3/entity/add', json={
+                    'ak': BMAP_AK,
+                    'service_id': YINGYAN_ID,
+                    'entity_name': obj['uid']
+                })
+            self.mapping.add(obj['uid'])
+        requests.post('http://yingyan.baidu.com/api/v3/track/addpoint', json={
+            'ak': BMAP_AK,
+            'service_id': YINGYAN_ID,
+            'entity_name': obj['uid'],
+            'latitude': obj['latitude'],
+            'longitude': obj['longitude'],
+            'loc_time': obj['time'],
+            'radius': obj['accuracy']
+        })
+        Location.objects.create(
+            account=obj['account'],
+            uid=obj['uid'],
+            name=obj['name'],
+            time=datetime.datetime.fromtimestamp(obj['time'] / 1000.0),
+            accuracy=obj['accuracy'],
+            latitude=obj['latitude'],
+            longitude=obj['longitude'],
+            address=obj['address']
+        )
 
     def __del__(self):
         if self.browser:

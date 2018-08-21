@@ -1,0 +1,65 @@
+{% load i18n staticfiles %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>FMF</title>
+    <style type="text/css">
+        html {
+            height: 100%
+        }
+
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            height: 90%;
+            width: 100%;
+        }
+
+        #timeline {
+            height: 10%;
+            width: 100%;
+        }
+
+        .container {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+    <script type="text/javascript" src="http://api.map.baidu.com/api?v=3.0&ak=FxojDWwBlj1QjtTkvGog9upKMnonfte8"></script>
+    <script type="text/javascript" src="{%static 'js/jquery-3.3.1.min.js'%}"></script>
+    <script type="text/javascript" src="{%static 'js/echarts.min.js'%}"></script>
+    <script type="text/javascript" src="http://www.echartsjs.com/gallery/vendors/echarts/extension/bmap.min.js"></script>
+</head>
+
+<body>
+<div class="container">
+    <div id="map"></div>
+    <div id="timeline"></div>
+</div>
+<script type="text/javascript">
+var dom = document.getElementById("timeline");
+var chart = echarts.init(dom);
+chart.setOption({
+    timeline: {
+        playInterval: 1000,
+        data: [
+            '2002-01-01 16:15','2002-01-01 16:18','2002-01-01 16:20'
+        ],
+        zlevel: 1,
+        bottom: '20%'
+    }
+}, true);
+
+var map = new BMap.Map("map");          // 创建地图实例
+var point = new BMap.Point(116.404, 39.915);  // 创建点坐标
+map.centerAndZoom(point, 15);                 // 初始化地图，设置中心点坐标和地图级别
+map.enableScrollWheelZoom(true);
+</script>
+</body>
+</html>

@@ -2,13 +2,14 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from app.icloud import ICloud, ICLOUD_DICT
 import logging
+from django.shortcuts import render
 
 logger = logging.getLogger('default')
 
 
 @staff_member_required
 def hello(request):
-    return HttpResponse("Hello world ! ")
+    return render(request, 'index.html')
 
 
 @staff_member_required
