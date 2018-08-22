@@ -95,7 +95,7 @@
             min: 0,
             max: 86399,
             values: [ 0, 86399 ],
-            change: function(event, ui) {
+            slide: function(event, ui){
                 var start_h = Math.floor(ui.values[0] / 3600);
                 var start_m = Math.floor((ui.values[0] - start_h * 3600) / 60);
                 var start_s = ui.values[0] - start_h * 3600 - start_m * 60;
@@ -106,6 +106,8 @@
                 var end_s = ui.values[1] - end_h * 3600 - end_m * 60;
                 var end = PrefixInteger(end_h) + ":" + PrefixInteger(end_m) + ":" + PrefixInteger(end_s);
                 $("#time_end").html(end);
+            },
+            change: function(event, ui) {
                 var date = time2Timestamp($("#datepicker").val() + " 00:00:00")
                 getTrack(map, date + ui.values[0], date + ui.values[1]);
             }
