@@ -113,13 +113,14 @@ class ICloud(object):
         self.tab.start()
         self.tab.Network.enable()
         # Start auto refresh.
-        Timer(1800, self.auto_refresh).start()
+        Timer(1200, self.auto_refresh).start()
         return True
 
     def auto_refresh(self):
+        self.browser.save_screenshot("screenshot.png")
         logger.info('REFRESHING...')
         self.browser.get('https://www.icloud.com/#fmf')
-        Timer(1800, self.auto_refresh).start()
+        Timer(1200, self.auto_refresh).start()
 
     def response_received(self, **kwargs):
         response = kwargs.get('response')
@@ -138,6 +139,8 @@ class ICloud(object):
                     name = '{first} {middle} {last}'.format(first=contact['firstName'], middle=contact['middleName'], last=contact['lastName']).strip()
                     contacts[id] = name
                 for loc in obj['locations']:
+                    if loc['location'] is None:
+                        continue
                     id = loc['id']
                     address = ' '.join(loc['location']['address']['formattedAddressLines'])
                     time = loc['location']['timestamp'] / 1000.0
@@ -168,7 +171,8 @@ class ICloud(object):
                 res = requests.post('http://yingyan.baidu.com/api/v3/entity/add', data={
                     'ak': BMAP_AK,
                     'service_id': YINGYAN_ID,
-                    'entity_name': obj['uid']
+                    'entity_name': obj['uid'],
+                    'entity_desc': obj['name']
                 })
                 logger.info('YingYan ADD entity: {res}'.format(res=res.text))
             self.mapping.add(obj['uid'])
@@ -180,7 +184,8 @@ class ICloud(object):
             'longitude': obj['longitude'],
             'loc_time': int(obj['time']),
             'radius': obj['accuracy'],
-            'coord_type_input': 'wgs84'
+            'coord_type_input': 'wgs84',
+            'address': obj['address']
         })
         logger.info('YingYan ADD point: {res}'.format(res=res.text))
         Location.objects.create(

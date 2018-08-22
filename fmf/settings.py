@@ -127,7 +127,7 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'standard': {
+        'default': {
             'format': '[%(asctime)s %(name)s:%(lineno)d %(levelname)s] %(message)s'
         }
     },

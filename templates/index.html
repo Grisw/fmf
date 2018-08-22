@@ -21,45 +21,187 @@
             width: 100%;
         }
 
-        #timeline {
+        .time-sets {
             height: 10%;
             width: 100%;
+            text-align: center;
         }
 
         .container {
             height: 100%;
             width: 100%;
         }
+
+        #datepicker{
+            margin-top: 10px;
+        }
+
+        .time{
+            height: 10%;
+            width: 50%;
+            margin-left: 25%;
+            margin-top: 10px;
+        }
     </style>
+    <link rel="stylesheet" href="{%static 'css/jquery-ui.min.css'%}">
+    <link rel="stylesheet" href="{%static 'css/jquery-ui.structure.min.css'%}">
+    <link rel="stylesheet" href="{%static 'css/jquery-ui.theme.min.css'%}">
     <script type="text/javascript" src="http://api.map.baidu.com/api?v=3.0&ak=FxojDWwBlj1QjtTkvGog9upKMnonfte8"></script>
     <script type="text/javascript" src="{%static 'js/jquery-3.3.1.min.js'%}"></script>
-    <script type="text/javascript" src="{%static 'js/echarts.min.js'%}"></script>
-    <script type="text/javascript" src="http://www.echartsjs.com/gallery/vendors/echarts/extension/bmap.min.js"></script>
+    <script type="text/javascript" src="{%static 'js/jquery-ui.min.js'%}"></script>
 </head>
 
 <body>
 <div class="container">
     <div id="map"></div>
-    <div id="timeline"></div>
+    <div class="time-sets">
+        <input type="text" id="datepicker" disabled>
+        <div class="time">
+            <div id="slider"></div>
+            <div style="margin-top: 5px;">
+                <p id="time_start" style="width: 50%;margin: auto; float: left;">00:00:00</p>
+                <p id="time_end" style="float: right;width: 50%;margin: auto;">23:59:59</p>
+            </div>
+        </div>
+    </div>
 </div>
 <script type="text/javascript">
-var dom = document.getElementById("timeline");
-var chart = echarts.init(dom);
-chart.setOption({
-    timeline: {
-        playInterval: 1000,
-        data: [
-            '2002-01-01 16:15','2002-01-01 16:18','2002-01-01 16:20'
-        ],
-        zlevel: 1,
-        bottom: '20%'
-    }
-}, true);
+    $(document).ready(function () {
+        var map = initMap();
+        initTimesets(map);
+        var date = time2Timestamp($("#datepicker").val() + " 00:00:00")
+        getTrack(map, date, date + 86399);
+    });
 
-var map = new BMap.Map("map");          // 创建地图实例
-var point = new BMap.Point(116.404, 39.915);  // 创建点坐标
-map.centerAndZoom(point, 15);                 // 初始化地图，设置中心点坐标和地图级别
-map.enableScrollWheelZoom(true);
+    function initMap() {
+        var map = new BMap.Map("map");
+        var point = new BMap.Point(-0.12877198591983383, 51.5239885101067);
+        map.centerAndZoom(point, 15);
+        map.enableScrollWheelZoom(true);
+        return map;
+    }
+
+    function initTimesets(map) {
+        $("#datepicker").datepicker({
+            showOn: "button",
+            buttonText: "Select date",
+            dateFormat: 'yy-mm-dd',
+            onSelect: function (value, inst) {
+                $("#slider").slider("values", [0, 86399]);
+            }
+        });
+        $("#slider").slider({
+            range: true,
+            min: 0,
+            max: 86399,
+            values: [ 0, 86399 ],
+            change: function(event, ui) {
+                var start_h = Math.floor(ui.values[0] / 3600);
+                var start_m = Math.floor((ui.values[0] - start_h * 3600) / 60);
+                var start_s = ui.values[0] - start_h * 3600 - start_m * 60;
+                var start = PrefixInteger(start_h) + ":" + PrefixInteger(start_m) + ":" + PrefixInteger(start_s);
+                $("#time_start").html(start);
+                var end_h = Math.floor(ui.values[1] / 3600);
+                var end_m = Math.floor((ui.values[1] - end_h * 3600) / 60);
+                var end_s = ui.values[1] - end_h * 3600 - end_m * 60;
+                var end = PrefixInteger(end_h) + ":" + PrefixInteger(end_m) + ":" + PrefixInteger(end_s);
+                $("#time_end").html(end);
+                var date = time2Timestamp($("#datepicker").val() + " 00:00:00")
+                getTrack(map, date + ui.values[0], date + ui.values[1]);
+            }
+        });
+        $("#datepicker").val(getDate());
+    }
+
+    function PrefixInteger(num, length=2) {
+        return (Array(length).join('0') + num).slice(-length);
+    }
+
+    function time2Timestamp(time) {
+        var f = time.split(' ', 2);
+        var d = (f[0] ? f[0] : '').split('-', 3);
+        var t = (f[1] ? f[1] : '').split(':', 3);
+        return (new Date(
+                parseInt(d[0], 10) || null,
+                (parseInt(d[1], 10) || 1) - 1,
+                parseInt(d[2], 10) || null,
+                parseInt(t[0], 10) || null,
+                parseInt(t[1], 10) || null,
+                parseInt(t[2], 10) || null
+                )).getTime() / 1000;
+    }
+
+    function getDate(){
+        var myDate = new Date();
+        //获取当前年
+        var year = myDate.getFullYear();
+        //获取当前月
+        var month = myDate.getMonth() + 1;
+        //获取当前日
+        var date = myDate.getDate();
+        return year + '-' + PrefixInteger(month) + "-" + PrefixInteger(date);
+    }
+
+    function getTrack(map, start, end) {
+        $.ajax({
+            url: "{% url 'tracks' %}?start=" + start + "&end=" + end,
+            method: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                if(data["status"] === 0){
+                    for(var d in data["data"]){
+                        if(data["data"][d]['track']["status"] === 0){
+                            map.clearOverlays();
+                            var points = [];
+                            for(var p in data["data"][d]['track']["points"]){
+                                var point = new BMap.Point(data["data"][d]['track']["points"][p]["longitude"], data["data"][d]['track']["points"][p]["latitude"]);
+                                var marker = new BMap.Marker(point);
+                                if(p == 0){
+                                    marker.setLabel(new BMap.Label("START"));
+                                }else if(p == data["data"][d]['track']["points"].length - 1){
+                                    marker.setLabel(new BMap.Label("END"));
+                                }
+                                marker.u_name = data["data"][d]['name']
+                                marker.obj = data["data"][d]['track']["points"][p];
+                                marker.addEventListener("click", function(){
+                                    var html = "<div style='width: 100%; height: 100%; overflow: auto;'>" +
+                                        "<label style='font-weight: bold;'>Address: </label>" + this.obj['address'] + "<br/>" +
+                                        "<label style='font-weight: bold;'>Position: </label>" + this.obj['longitude'] + ", " + this.obj["latitude"] + "<br/>" +
+                                        "<label style='font-weight: bold;'>Time: </label>" + timestamp2Time(this.obj['loc_time']) + "<br/>" +
+                                        "<label style='font-weight: bold;'>Accuracy: </label>" + this.obj['radius'] + "</div>";
+                                    var infoWindow = new BMap.InfoWindow(html, {
+                                        width : 380,
+                                        height: 150,
+                                        title: this.u_name
+                                    });
+                                    map.openInfoWindow(infoWindow, this.getPosition());      // 打开信息窗口
+                                });
+                                map.addOverlay(marker);
+                                points.push(point);
+                            }
+                            var polyline = new BMap.Polyline(points, {strokeColor:"blue", strokeWeight:6, strokeOpacity:0.5});
+                            map.addOverlay(polyline);
+                        }else{
+                            console.log(data["data"][d]);
+                        }
+                    }
+                }else{
+                    console.log(data);
+                }
+            }
+        });
+    }
+
+    function timestamp2Time(timestamp) {
+        var d = new Date(timestamp * 1000);    //根据时间戳生成的时间对象
+        var date = (d.getFullYear()) + "-" +
+                   (d.getMonth() + 1) + "-" +
+                   (d.getDate()) + " " +
+                   (d.getHours()) + ":" +
+                   (d.getMinutes()) + ":" +
+                   (d.getSeconds());
+        return date;
+    }
 </script>
 </body>
 </html>

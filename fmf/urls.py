@@ -20,6 +20,7 @@ from app import views
 urlpatterns = [
     path('admin/app/feed/start', views.feed_start, name="feed_start"),
     path('admin/app/feed/codes', views.feed_codes, name="feed_codes"),
+    path('api/track', views.tracks, name="tracks"),
     path('admin/', admin.site.urls),
     path('', views.hello),
 ]
