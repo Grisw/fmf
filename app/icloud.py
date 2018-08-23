@@ -113,14 +113,17 @@ class ICloud(object):
         self.tab.start()
         self.tab.Network.enable()
         # Start auto refresh.
-        Timer(1200, self.auto_refresh).start()
+        Timer(2400, self.auto_refresh).start()
         return True
 
     def auto_refresh(self):
-        self.browser.save_screenshot("screenshot.png")
         logger.info('REFRESHING...')
-        self.browser.get('https://www.icloud.com/#fmf')
-        Timer(1200, self.auto_refresh).start()
+        try:
+            self.browser.save_screenshot("screenshot.png")
+            self.browser.get('https://www.icloud.com/#fmf')
+            Timer(2400, self.auto_refresh).start()
+        except Exception as e:
+            Timer(60, self.auto_refresh).start()
 
     def response_received(self, **kwargs):
         response = kwargs.get('response')
