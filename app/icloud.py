@@ -139,7 +139,7 @@ class ICloud(object):
             Timer(60, self.auto_refresh).start()
         except Exception as e:
             logger.error(e.args)
-            Timer(60, self.refresh_page).start()
+            Timer(10, self.refresh_page).start()
 
     def response_received(self, **kwargs):
         response = kwargs.get('response')

@@ -10,4 +10,4 @@ class FeedAdmin(admin.ModelAdmin):
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
     list_display = ('name', 'time', 'address')
-    readonly_fields = ('account', 'uid', 'name', 'time', 'longitude', 'latitude', 'accuracy', 'address')
+    readonly_fields = ('locid', 'account', 'uid', 'name', 'time', 'longitude', 'latitude', 'accuracy', 'address')
