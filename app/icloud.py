@@ -3,16 +3,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 import logging
 import datetime
 import pychrome
 import json
 import random
-import time
 from threading import Timer
 from app.models import Location
 import requests
+from django.db import IntegrityError
 from fmf.settings import YINGYAN_ID, BMAP_AK
 
 logger = logging.getLogger('default')
@@ -113,17 +113,33 @@ class ICloud(object):
         self.tab.start()
         self.tab.Network.enable()
         # Start auto refresh.
-        Timer(2400, self.auto_refresh).start()
+        Timer(60, self.auto_refresh).start()
         return True
 
     def auto_refresh(self):
+        try:
+            self.browser.switch_to.default_content()
+            frame = self.__wait_for_visible('//*[@id="fmf"]')
+            self.browser.switch_to.frame(frame)
+
+            nearby = self.__wait_for_visible('/html/body/div[2]/div/div/div[2]/div[1]/div/div[3]/div[1]/div[1]')
+            friends = self.browser.find_elements_by_xpath('/html/body/div[2]/div/div/div[2]/div[1]/div/div[3]/div[1]/div[not(contains(@class, "nearby"))]')
+            for friend in friends:
+                friend.click()
+            nearby.click()
+            Timer(60, self.auto_refresh).start()
+        except WebDriverException:
+            self.refresh_page()
+
+    def refresh_page(self):
         logger.info('REFRESHING...')
         try:
             self.browser.save_screenshot("screenshot.png")
             self.browser.get('https://www.icloud.com/#fmf')
-            Timer(2400, self.auto_refresh).start()
-        except Exception as e:
             Timer(60, self.auto_refresh).start()
+        except Exception as e:
+            logger.error(e.args)
+            Timer(60, self.refresh_page).start()
 
     def response_received(self, **kwargs):
         response = kwargs.get('response')
@@ -145,12 +161,14 @@ class ICloud(object):
                     if loc['location'] is None:
                         continue
                     id = loc['id']
+                    locid = loc['location']['locationId']
                     address = ' '.join(loc['location']['address']['formattedAddressLines'])
                     time = loc['location']['timestamp'] / 1000.0
                     accuracy = loc['location']['horizontalAccuracy']
                     latitude = loc['location']['latitude']
                     longitude = loc['location']['longitude']
                     self.save_model({
+                        'locid': locid,
                         'account': self.account,
                         'uid': id,
                         'name': contacts[id],
@@ -179,6 +197,22 @@ class ICloud(object):
                 })
                 logger.info('YingYan ADD entity: {res}'.format(res=res.text))
             self.mapping.add(obj['uid'])
+        if Location.objects.filter(locid=obj['locid']):
+            return
+        try:
+            Location.objects.create(
+                locid=obj['locid'],
+                account=obj['account'],
+                uid=obj['uid'],
+                name=obj['name'],
+                time=datetime.datetime.fromtimestamp(obj['time']),
+                accuracy=obj['accuracy'],
+                latitude=obj['latitude'],
+                longitude=obj['longitude'],
+                address=obj['address']
+            )
+        except IntegrityError:
+            pass
         res = requests.post('http://yingyan.baidu.com/api/v3/track/addpoint', data={
             'ak': BMAP_AK,
             'service_id': YINGYAN_ID,
@@ -191,16 +225,6 @@ class ICloud(object):
             'address': obj['address']
         })
         logger.info('YingYan ADD point: {res}'.format(res=res.text))
-        Location.objects.create(
-            account=obj['account'],
-            uid=obj['uid'],
-            name=obj['name'],
-            time=datetime.datetime.fromtimestamp(obj['time']),
-            accuracy=obj['accuracy'],
-            latitude=obj['latitude'],
-            longitude=obj['longitude'],
-            address=obj['address']
-        )
 
     def __del__(self):
         if self.browser:

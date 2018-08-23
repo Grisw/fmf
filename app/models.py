@@ -7,6 +7,7 @@ class Feed(models.Model):
 
 
 class Location(models.Model):
+    locid = models.CharField(max_length=36, primary_key=True)
     account = models.EmailField()
     uid = models.CharField(max_length=20)
     name = models.CharField(max_length=50)
