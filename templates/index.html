@@ -163,7 +163,7 @@
                                 }else if(p == data["data"][d]['track']["points"].length - 1){
                                     marker.setLabel(new BMap.Label("END"));
                                 }
-                                marker.u_name = data["data"][d]['name']
+                                marker.u_name = data["data"][d]['name'];
                                 marker.obj = data["data"][d]['track']["points"][p];
                                 marker.addEventListener("click", function(){
                                     var html = "<div style='width: 100%; height: 100%; overflow: auto;'>" +
@@ -173,8 +173,15 @@
                                         "<label style='font-weight: bold;'>Accuracy: </label>" + this.obj['radius'] + "</div>";
                                     var infoWindow = new BMap.InfoWindow(html, {
                                         width : 380,
-                                        height: 150,
+                                        height: 140,
+                                        offset: new BMap.Size(0, -30),
                                         title: this.u_name
+                                    });
+                                    var circle = new BMap.Circle(this.getPosition(), this.obj['radius'], {strokeColor:"blue", strokeWeight:1, strokeOpacity:0.5, fillOpacity: 0.3});        // 创建标注
+                                    map.addOverlay(circle);
+                                    infoWindow.circle = circle;
+                                    infoWindow.addEventListener("close", function () {
+                                        map.removeOverlay(this.circle);
                                     });
                                     map.openInfoWindow(infoWindow, this.getPosition());      // 打开信息窗口
                                 });

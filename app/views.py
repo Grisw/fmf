@@ -38,7 +38,8 @@ def tracks(request):
                 'start_time': start_time,
                 'end_time': end_time,
                 'is_processed': 1,
-                'process_option': 'need_denoise=1,radius_threshold=0,need_vacuate=1,need_mapmatch=0,radius_threhold=0,transport_mode=auto'
+                'process_option': 'need_denoise=0,need_vacuate=1,need_mapmatch=0,radius_threhold=0,transport_mode=auto',
+                'page_size': 5000
             })
             tracks.append({'name': entity['entity_desc'], 'track': json.loads(res.text)})
         return JsonResponse({
