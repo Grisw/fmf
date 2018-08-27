@@ -127,13 +127,14 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'default': {
-            'format': '[%(asctime)s %(name)s:%(lineno)d %(levelname)s] %(message)s'
+        'standard': {
+            'format': '[%(asctime)s %(thread)d %(name)s:%(lineno)d %(levelname)s] %(message)s'
         }
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'standard'
         },
     },
     'loggers': {
@@ -146,3 +147,9 @@ LOGGING = {
 
 BMAP_AK = 'FxojDWwBlj1QjtTkvGog9upKMnonfte8'
 YINGYAN_ID = 204131
+
+SMTP_HOST = 'smtp.qq.com'
+SMTP_PORT = 465
+EMAIL_ACCOUNT = ''
+EMAIL_PASSWORD = ''
+EMAIL_RECEIVERS = ['']

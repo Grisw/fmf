@@ -14,6 +14,7 @@ from app.models import Location
 import requests
 from django.db import IntegrityError
 from fmf.settings import YINGYAN_ID, BMAP_AK
+import app.mail
 
 logger = logging.getLogger('default')
 ICLOUD_DICT = {}
@@ -23,24 +24,25 @@ class ICloud(object):
 
     TIMEOUT = 100
 
+    id = None
     account = None
     browser = None
     chrome = None
     wait = None
     tab = None
-    current_id = -1
+    deleted = False
     mapping = set()
 
     def __init__(self):
         # Start chromedriver
         options = webdriver.ChromeOptions()
         options.add_argument('--disable-background-networking=false')
-        id = random.randint(0, 100)
+        self.id = random.randint(0, 100)
         retry_count = 0
         while True:
             try:
                 self.browser = webdriver.Chrome(chrome_options=options,
-                                                service_args=['--verbose', '--log-path=./logs/{id}.log'.format(id=id)])
+                                                service_args=['--verbose', '--log-path=./logs/{id}.log'.format(id=self.id)])
                 break
             except ConnectionResetError as e:
                 retry_count += 1
@@ -50,7 +52,7 @@ class ICloud(object):
         self.wait = WebDriverWait(self.browser, self.TIMEOUT)
         # Get debug url
         url = None
-        with open('./logs/{id}.log'.format(id=id), 'r') as log:
+        with open('./logs/{id}.log'.format(id=self.id), 'r') as log:
             for line in log:
                 if 'DevTools request: http://localhost' in line:
                     url = line[line.index('http'):].replace('/json/version', '').strip()
@@ -117,6 +119,8 @@ class ICloud(object):
         return True
 
     def auto_refresh(self):
+        if self.deleted:
+            return
         try:
             self.browser.switch_to.default_content()
             frame = self.__wait_for_visible('//*[@id="fmf"]')
@@ -131,15 +135,23 @@ class ICloud(object):
         except WebDriverException:
             self.refresh_page()
 
-    def refresh_page(self):
+    def refresh_page(self, retry=1):
+        if self.deleted:
+            return
+        if retry >= 10:
+            logger.error('SERVICE DOWN!')
+            ICLOUD_DICT.pop(self.account)
+            app.mail.send('FMF: SERVICE DOWN', '<p>{account} unavailable, login again.</p>'.format(account=self.account), img='logs/{id}.png'.format(id=self.id))
+            return
         logger.info('REFRESHING...')
         try:
-            self.browser.save_screenshot("screenshot.png")
+            self.browser.save_screenshot('logs/{id}.png'.format(id=self.id))
             self.browser.get('https://www.icloud.com/#fmf')
             Timer(60, self.auto_refresh).start()
         except Exception as e:
             logger.error(e.args)
-            Timer(10, self.refresh_page).start()
+            retry += 1
+            Timer(10, self.refresh_page, [retry]).start()
 
     def response_received(self, **kwargs):
         response = kwargs.get('response')
@@ -162,7 +174,12 @@ class ICloud(object):
                         continue
                     id = loc['id']
                     locid = loc['location']['locationId']
-                    address = ' '.join(loc['location']['address']['formattedAddressLines'])
+                    if loc['location']['address'] is None:
+                        address = 'UNKNOWN'
+                    elif 'formattedAddressLines' in loc['location']['address']:
+                        address = ' '.join(loc['location']['address']['formattedAddressLines'])
+                    else:
+                        address = '{streetAddress} {locality} {administrativeArea}'.format(streetAddress=loc['location']['address']['streetAddress'], locality=loc['location']['address']['locality'], administrativeArea=loc['location']['address']['administrativeArea'])
                     time = loc['location']['timestamp'] / 1000.0
                     accuracy = loc['location']['horizontalAccuracy']
                     latitude = loc['location']['latitude']
@@ -227,6 +244,7 @@ class ICloud(object):
         logger.info('YingYan ADD point: {res}'.format(res=res.text))
 
     def __del__(self):
+        self.deleted = True
         if self.browser:
             self.browser.close()
             self.browser.quit()
