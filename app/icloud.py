@@ -37,6 +37,7 @@ class ICloud(object):
         # Start chromedriver
         options = webdriver.ChromeOptions()
         options.add_argument('--disable-background-networking=false')
+        options.add_argument('--no-sandbox')
         self.id = random.randint(0, 100)
         retry_count = 0
         while True:
@@ -132,7 +133,8 @@ class ICloud(object):
                 friend.click()
             nearby.click()
             Timer(60, self.auto_refresh).start()
-        except WebDriverException:
+        except WebDriverException as e:
+            logger.error(e.args)
             self.refresh_page()
 
     def refresh_page(self, retry=1):
