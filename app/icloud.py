@@ -34,34 +34,8 @@ class ICloud(object):
     mapping = set()
 
     def __init__(self):
-        # Start chromedriver
-        options = webdriver.ChromeOptions()
-        options.add_argument('--disable-background-networking=false')
-        options.add_argument('--no-sandbox')
         self.id = random.randint(0, 100)
-        retry_count = 0
-        while True:
-            try:
-                self.browser = webdriver.Chrome(chrome_options=options,
-                                                service_args=['--verbose', '--log-path=./logs/{id}.log'.format(id=self.id)])
-                break
-            except ConnectionResetError as e:
-                retry_count += 1
-                if retry_count >= 10:
-                    raise e
-        self.browser.set_page_load_timeout(self.TIMEOUT)
-        self.wait = WebDriverWait(self.browser, self.TIMEOUT)
-        # Get debug url
-        url = None
-        with open('./logs/{id}.log'.format(id=self.id), 'r') as log:
-            for line in log:
-                if 'DevTools request: http://localhost' in line:
-                    url = line[line.index('http'):].replace('/json/version', '').strip()
-                    break
-        if not url:
-            raise Exception('Invalid protocol url.')
-        # Start pychrome
-        self.chrome = pychrome.Browser(url=url)
+        self.start_browser()
         logger.info('Start a browser.')
 
     def __wait_for_visible(self, xpath):
@@ -110,6 +84,8 @@ class ICloud(object):
             # Codes were incorrect.
             return False
 
+        self.save_cookies()
+
         logger.info('Start network listening...')
         self.tab = self.chrome.list_tab()[-1]
         self.tab.Network.responseReceived = self.response_received
@@ -118,6 +94,72 @@ class ICloud(object):
         # Start auto refresh.
         Timer(60, self.auto_refresh).start()
         return True
+
+    def save_cookies(self):
+        cookies = self.browser.get_cookies()
+        jsonCookies = json.dumps(cookies)
+        with open('./logs/{id}.cookies'.format(id=self.id), 'w') as f:
+            f.write(jsonCookies)
+
+    def load_cookies(self):
+        self.browser.delete_all_cookies()
+        with open('./logs/{id}.cookies'.format(id=self.id), 'r') as f:
+            listCookies = json.loads(f.read())
+        for cookie in listCookies:
+            self.browser.add_cookie({
+                'domain': cookie['domain'],
+                'name': cookie['name'],
+                'value': cookie['value'],
+                'path': '/',
+                'expires': None
+            })
+        logger.info('Browser cookies loaded.')
+
+    def start_browser(self):
+        # Start chromedriver
+        options = webdriver.ChromeOptions()
+        options.add_argument('--disable-background-networking=false')
+        options.add_argument('--no-sandbox')
+        retry_count = 0
+        while True:
+            try:
+                self.browser = webdriver.Chrome(chrome_options=options,
+                                                service_args=['--verbose',
+                                                              '--log-path=./logs/{id}.log'.format(id=self.id)])
+                break
+            except ConnectionResetError as e:
+                retry_count += 1
+                if retry_count >= 10:
+                    raise e
+        self.browser.set_page_load_timeout(self.TIMEOUT)
+        self.wait = WebDriverWait(self.browser, self.TIMEOUT)
+        # Get debug url
+        url = None
+        with open('./logs/{id}.log'.format(id=self.id), 'r') as log:
+            for line in log:
+                if 'DevTools request: http://localhost' in line:
+                    url = line[line.index('http'):].replace('/json/version', '').strip()
+                    break
+        if not url:
+            raise Exception('Invalid protocol url.')
+        # Start pychrome
+        self.chrome = pychrome.Browser(url=url)
+
+    def restart_browser(self):
+        if self.browser:
+            self.browser.close()
+            self.browser.quit()
+        self.start_browser()
+        logger.info('Browser restarted.')
+        self.load_cookies()
+        self.browser.get('https://www.icloud.com/#fmf')
+        logger.info('Start network listening...')
+        self.tab = self.chrome.list_tab()[-1]
+        self.tab.Network.responseReceived = self.response_received
+        self.tab.start()
+        self.tab.Network.enable()
+        # Start auto refresh.
+        Timer(60, self.auto_refresh).start()
 
     def auto_refresh(self):
         if self.deleted:
@@ -132,6 +174,7 @@ class ICloud(object):
             for friend in friends:
                 friend.click()
             nearby.click()
+            self.save_cookies()
             Timer(60, self.auto_refresh).start()
         except WebDriverException as e:
             logger.error(e.args)
@@ -141,9 +184,12 @@ class ICloud(object):
         if self.deleted:
             return
         if retry >= 10:
-            logger.error('SERVICE DOWN!')
-            ICLOUD_DICT.pop(self.account)
-            app.mail.send('FMF: SERVICE DOWN', '<p>{account} unavailable, login again.</p>'.format(account=self.account), img='logs/{id}.png'.format(id=self.id))
+            logger.error('SERVICE DOWN! restarting...')
+            try:
+                self.restart_browser()
+            except Exception as e:
+                ICLOUD_DICT.pop(self.account)
+                app.mail.send('FMF: SERVICE DOWN', '<p>{account} unavailable, login again.</p><p>{e}</p>'.format(account=self.account, e=e.args), img='logs/{id}.png'.format(id=self.id))
             return
         logger.info('REFRESHING...')
         try:
