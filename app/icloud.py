@@ -146,9 +146,12 @@ class ICloud(object):
         self.chrome = pychrome.Browser(url=url)
 
     def restart_browser(self):
-        if self.browser:
-            self.browser.close()
-            self.browser.quit()
+        try:
+            if self.browser:
+                self.browser.close()
+                self.browser.quit()
+        except Exception:
+            pass
         self.start_browser()
         logger.info('Browser restarted.')
         self.load_cookies()
