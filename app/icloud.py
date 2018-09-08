@@ -154,6 +154,7 @@ class ICloud(object):
             pass
         self.start_browser()
         logger.info('Browser restarted.')
+        self.browser.get('https://www.icloud.com')
         self.load_cookies()
         self.browser.get('https://www.icloud.com/#fmf')
         logger.info('Start network listening...')
