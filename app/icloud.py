@@ -154,9 +154,17 @@ class ICloud(object):
             pass
         self.start_browser()
         logger.info('Browser restarted.')
-        self.browser.get('https://www.icloud.com')
-        self.load_cookies()
-        self.browser.get('https://www.icloud.com/#fmf')
+        retry = 0
+        while True:
+            try:
+                self.browser.get('https://www.icloud.com')
+                self.load_cookies()
+                self.browser.get('https://www.icloud.com/#fmf')
+                break
+            except Exception as e:
+                retry += 1
+                if retry >= 5:
+                    raise e
         logger.info('Start network listening...')
         self.tab = self.chrome.list_tab()[-1]
         self.tab.Network.responseReceived = self.response_received
@@ -187,7 +195,7 @@ class ICloud(object):
     def refresh_page(self, retry=1):
         if self.deleted:
             return
-        if retry >= 10:
+        if retry >= 5:
             logger.error('SERVICE DOWN! restarting...')
             try:
                 self.restart_browser()
