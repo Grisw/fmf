@@ -157,9 +157,9 @@ class ICloud(object):
         retry = 0
         while True:
             try:
-                self.browser.get('https://www.icloud.com')
-                self.load_cookies()
                 self.browser.get('https://www.icloud.com/#fmf')
+                self.load_cookies()
+                self.browser.refresh()
                 break
             except Exception as e:
                 retry += 1
@@ -206,7 +206,7 @@ class ICloud(object):
         logger.info('REFRESHING...')
         try:
             self.browser.save_screenshot('logs/{id}.png'.format(id=self.id))
-            self.browser.get('https://www.icloud.com/#fmf')
+            self.browser.refresh()
             Timer(60, self.auto_refresh).start()
         except Exception as e:
             logger.error(e.args)
