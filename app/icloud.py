@@ -15,6 +15,8 @@ import requests
 from django.db import IntegrityError
 from fmf.settings import YINGYAN_ID, BMAP_AK
 import app.mail
+from selenium.webdriver.chrome.service import Service
+import gc
 
 logger = logging.getLogger('default')
 ICLOUD_DICT = {}
@@ -32,9 +34,14 @@ class ICloud(object):
     tab = None
     deleted = False
     mapping = set()
+    c_service = None
 
     def __init__(self):
+        gc.collect()
         self.id = random.randint(0, 100)
+        self.c_service = Service('chromedriver')
+        self.c_service.command_line_args()
+        self.c_service.start()
         self.start_browser()
         logger.info('Start a browser.')
 
@@ -306,6 +313,6 @@ class ICloud(object):
     def __del__(self):
         self.deleted = True
         if self.browser:
-            self.browser.close()
             self.browser.quit()
+        self.c_service.stop()
         logger.info('A browser is Closed.')
